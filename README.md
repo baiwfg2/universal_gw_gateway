@@ -2,4 +2,4 @@
 
 具体文档参见docs/README
 
-维护人：Chen Shi <baiwfg2@gmail.com>
+维护人：Chen Shi

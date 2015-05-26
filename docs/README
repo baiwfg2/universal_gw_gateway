@@ -1,0 +1,39 @@
+通用python中间件流程如下：
+
+1、中间件程序大概流程是：注册hwid(reg_hwid)->注册mwid(reg_mwid)->更新网关(update_mw)->获取设备属性(get_dev_property)->循环定时上传数值和图片(可根据需求修改time.sleep参数而自定义定时时间，单位为秒)
+
+2、对于获取属性，采用了get_dev_property，此方法仅仅读大家配置的dev_property.xml文件，而不修改它，至于生成的新信息就以json格式输出到res_list.txt中。如果其他程序想利用，可以读这个文件。
+
+3、关于dev_property.xml的配置
+这是大家要自己定义的文件！比如我发给大家的这个文件中，有三个资源。第一个资源名叫"temp1"；类型（<Type>中的值，目前只取0和1）为0，表示数值型数据；第二个资源名"camera1"，类型为1，表示图片型数据(支持本地图片和远程图片)；第三个资源名叫"camera2"，类型为1。上一版本只需填资源名(名字自己取，如果取中文报错就取英文)，此版本还需填资源类型，以告知主程序选择是上传数值还是上传图片。其它地方都不需要变！如果你还有资源，类比temp1或camera1的一个资源的写法，添加在</Resource>之后
+
+4、关于数据源文件data.txt的格式要求
+功能就是：各家程序向data.txt中写入信息(如果需要的话)，中间件读和上传。须为json格式，以键值对的形式出现。比如我发出的data.txt是这样的(各家具体情况自己类比就行)：
+{"temp1":2.50, "camera1":"a.jpg", "camera2":"http://10.102.6.224/tmpfs/snap.jpg"}
+那么就有三个资源，且键名与在dev_property.xml中配置的名称是对应的，这点很重要！
+
+类型为0的temp1的值就能为整型或浮点型；
+类型为1的图片camera1选为本地图片
+类型为1的图片camera2为远程图片，值就为一个url，注意要加上http://前缀
+最后是以{}包装成json格式
+
+5、关于res_list.txt的格式说明
+如果有python以外的程序需要上传数据的话，可以读取这个文件(主要是获取平台分配的资源ID)和cfg/gw_json.cfg中的mwid。我的示例如下：
+{"camera1": ["1", "1"], "temp1": ["0", "0"], "camera2": ["1", "2"]}
+还是json格式，键为资源名，值是个列表，第一个元素指类型(0或1)，第二个元素指平台分配的资源ID
+
+6、关于图片POST上传是如何实现的
+最终能够实现还多亏了魏芳老师，核心方法在gateway.upload_image和restful.post_image上，通过python的requests库实现。所以有上传图片需求的，要安装requests库。安装简单说明如下：
+到https://pypi.python.org/pypi/setuptools#downloads 下载ez_setup.py文件，然后执行：
+python ez_setup.py
+就会下载easy_install文件，执行它安装requests:
+easy_install requests
+如果这招不行，请参考网上更多教程。
+
+7、如果多次执行python main.py的话，每次都会产生新的设备号和资源号。这不是什么大问题，但如果担心过多资源号在平台聚集的话，可以使用命令python main.py -upt清除过多设备资源号，那么资源ID就会重新从0开始分配了。
+
+8、如果在wot.minelab.cn页面的左侧不能显示网关的话，又想查看数据是否真正上传成功，可通过以下方式查看：
+如果是数值，浏览器器访问：http://121.42.31.195:9071/WIFPa/ResourceData.xml/{MWID}?ResourceID={ID}，{}的部分用相应的mwid和resid替代(这两者都会在python窗口输出)
+
+如果是图片，浏览器访问：http://121.42.31.195:9071/WIFPa/GetImage/{MWID}?ResID={RESID}，同理如上
+
